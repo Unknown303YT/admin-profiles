@@ -22,14 +22,12 @@ public abstract class ServerPlayerMixin {
     )
     private void injectProfileName(
             CallbackInfoReturnable<Component> cir) {
-
         ServerPlayer self = (ServerPlayer) (Object) this;
 
-        String overrideName =
-                ProfileManager.getDisplayName(self.getUUID());
+        String overrideName = ProfileManager.get(self.level())
+                .getDisplayName(self.getUUID());
 
-        if (overrideName != null) {
+        if (overrideName != null)
             cir.setReturnValue(Component.literal(overrideName));
-        }
     }
 }

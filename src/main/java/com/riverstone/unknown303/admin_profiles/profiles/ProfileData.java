@@ -4,40 +4,35 @@ import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ProfileData {
     public static final Codec<ProfileData> CODEC =
             RecordCodecBuilder.create(instance ->
-                    instance.group(Codec.STRING.fieldOf("displayName").orElse("PLAYER").forGetter(data -> data.getDisplayName()),
-                                    Codec.BOOL.fieldOf("isOp").orElse(false).forGetter(data -> data.isOp()),
-                                    ItemStack.CODEC.listOf().fieldOf("inventory").orElse(new ArrayList<>()).forGetter(data -> data.getInventory()),
-                                    ItemStack.CODEC.listOf().fieldOf("armor").orElse(new ArrayList<>()).forGetter(data -> data.getArmor()),
-                                    ItemStack.CODEC.fieldOf("offhand").orElse(ItemStack.EMPTY).forGetter(data -> data.getOffhand()))
+                    instance.group(Codec.STRING.fieldOf("displayName").orElse("PLAYER").forGetter(ProfileData::getDisplayName),
+                                    Codec.BOOL.fieldOf("isOp").orElse(false).forGetter(ProfileData::isOp),
+                                    ItemStack.CODEC.listOf().fieldOf("slots").orElse(new ArrayList<>(Collections.nCopies(41, ItemStack.EMPTY))).forGetter(data -> data.slots))
                             .apply(instance, ProfileData::new));
 
     private final String displayName;
     private final boolean isOp;
-    private final List<ItemStack> inventory;
-    private final List<ItemStack> armor;
-    private ItemStack offhand = ItemStack.EMPTY;
+    private List<ItemStack> slots;
 
     public ProfileData(String displayName, boolean isOp) {
         this.displayName = displayName;
         this.isOp = isOp;
-        inventory = new ArrayList<>();
-        armor = new ArrayList<>();
+        slots = new ArrayList<>(Collections.nCopies(41, ItemStack.EMPTY));
     }
 
-    public ProfileData(String displayName, boolean isOp, List<ItemStack> inventory, List<ItemStack> armor, ItemStack offhand) {
+    public ProfileData(String displayName, boolean isOp, List<ItemStack> slots) {
         this.displayName = displayName;
         this.isOp = isOp;
-        this.inventory = new ArrayList<>(inventory);
-        this.armor = new ArrayList<>(armor);
-        this.offhand = offhand.copy();
+        this.slots = new ArrayList<>(slots);
     }
 
     public String getDisplayName() {
@@ -48,15 +43,15 @@ public class ProfileData {
         return isOp;
     }
 
-    public List<ItemStack> getInventory() {
-        return new ArrayList<>(inventory);
+    public ItemStack getSlot(int slot) {
+        return slots.get(slot).copy();
     }
 
-    public List<ItemStack> getArmor() {
-        return new ArrayList<>(armor);
+    public void setSlot(int slot, ItemStack stack) {
+        slots.set(slot, stack.copy());
     }
 
-    public ItemStack getOffhand() {
-        return offhand.copy();
+    public List<ItemStack> getAllSlots() {
+        return slots.stream().map(ItemStack::copy).toList();
     }
 }

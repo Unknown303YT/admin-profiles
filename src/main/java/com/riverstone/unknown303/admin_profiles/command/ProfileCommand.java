@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.riverstone.unknown303.admin_profiles.profiles.ProfileManager;
+import net.fabricmc.fabric.api.permission.v1.PermissionNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -32,18 +33,20 @@ public class ProfileCommand {
                                                 StringArgumentType.word())
                                         .executes(ctx -> {
                                             ServerPlayer player =
-                                                    ctx.getSource().getPlayerOrThrow();
+                                                    ctx.getSource().getPlayerOrException();
                                             String name =
                                                     StringArgumentType.getString(ctx, "name");
 
-                                            if (!ProfileManager.hasMultiProfile(player.getUUID())) {
-                                                player.sendMessage(Component.literal(
+                                            ProfileManager manager = ProfileManager.get(player.level());
+
+                                            if (!manager.hasMultiProfile(player.getUUID())) {
+                                                player.sendSystemMessage(Component.literal(
                                                         "[OathProfiles] You don't have"
                                                                 + " multiple profiles."), false);
                                                 return 0;
                                             }
 
-                                            ProfileManager.switchProfile(player, name);
+                                            manager.switchProfile(player, name);
                                             return 1;
                                         })))
 
@@ -51,13 +54,14 @@ public class ProfileCommand {
                         .then(Commands.literal("list")
                                 .executes(ctx -> {
                                     ServerPlayer p =
-                                            ctx.getSource().getPlayerOrThrow();
+                                            ctx.getSource().getPlayerOrException();
+                                    ProfileManager manager = ProfileManager.get(p.level());
                                     var list =
-                                            ProfileManager.listProfiles(p.getUUID());
+                                            manager.listProfiles(p.getUUID());
                                     String active =
-                                            ProfileManager.getActiveProfileName(
+                                            manager.getActiveProfileName(
                                                     p.getUUID());
-                                    p.sendMessage(Component.literal(
+                                    p.sendSystemMessage(Component.literal(
                                             "[OathProfiles] Your profiles: "
                                                     + list + "  (active: " + active
                                                     + ")"), false);
@@ -66,7 +70,7 @@ public class ProfileCommand {
 
                         // /profile grant <player> <profileName> <displayName> <isOp>
                         .then(Commands.literal("grant")
-                                .requires(src -> src.hasPermissionLevel(4))
+                                .requires(src -> src.getServer().getPlayerList().isOp(src.getPlayer().nameAndId()))
                                 .then(Commands.argument("player",
                                                 StringArgumentType.word())
                                         .then(Commands.argument("profileName",
@@ -81,13 +85,17 @@ public class ProfileCommand {
                                                                                     ctx, "player");
                                                                     ServerPlayer target =
                                                                             ctx.getSource().getServer()
-                                                                                    .getPlayerManager()
+                                                                                    .getPlayerList()
                                                                                     .getPlayer(targetName);
+
                                                                     if (target == null) {
-                                                                        ctx.getSource().sendError(
+                                                                        ctx.getSource().sendFailure(
                                                                                 Component.literal("Player not found."));
                                                                         return 0;
                                                                     }
+
+                                                                    ProfileManager manager = ProfileManager.get(target.level());
+
                                                                     String pName =
                                                                             StringArgumentType.getString(
                                                                                     ctx, "profileName");
@@ -98,9 +106,9 @@ public class ProfileCommand {
                                                                             BoolArgumentType.getBool(
                                                                                     ctx, "isOp");
 
-                                                                    ProfileManager.grantProfile(
+                                                                    manager.grantProfile(
                                                                             target.getUUID(), pName, dName, op);
-                                                                    ctx.getSource().sendFeedback(
+                                                                    ctx.getSource().sendSuccess(
                                                                             () -> Component.literal("Granted profile '"
                                                                                     + pName + "' to " + targetName),
                                                                             true);

@@ -32,11 +32,5 @@ public class AdminProfiles implements ModInitializer {
                 (handler, sender, server) ->
                         PlayerDataEvents.onPlayerJoin(handler.player)
         );
-
-        // Save NBT on disconnect
-        ServerPlayConnectionEvents.DISCONNECT.register(
-                (handler, server) ->
-                        PlayerDataEvents.onPlayerLeave(handler.player)
-        );
 	}
 }
